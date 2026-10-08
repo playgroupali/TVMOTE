@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Google TV Touch Remote</title>
+    <style>
+        body { 
+            background-color: #050505; 
+            color: #FFFFFF; 
+            font-family: system-ui, -apple-system, sans-serif; 
+            margin: 0; 
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .remote-frame {
+            width: 100%;
+            max-width: 350px;
+            background-color: #0b0b0d;
+            border: 1px solid #1a1a22;
+            border-radius: 32px;
+            padding: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-sizing: border-box;
+        }
+
+        h2 { font-size: 20px; font-weight: 700; text-align: center; margin: 0; letter-spacing: -0.5px; }
+
+        .config-bar {
+            display: flex;
+            gap: 8px;
+            background-color: #121215;
+            border-radius: 14px;
+            padding: 8px 12px;
+            border: 1px solid #222;
+        }
+        .config-bar input {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            font-family: monospace;
+            flex: 1;
+            outline: none;
+        }
+        .save-btn {
+            background: #2563eb;
+            border: none;
+            color: white;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* Mouse Trackpad Cursor Zone */
+        .trackpad {
+            width: 100%;
+            height: 240px;
+            background: linear-gradient(145deg, #0d0d11, #070709);
+            border: 2px dashed #2563eb;
+            border-radius: 24px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4b5563;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            box-shadow: inset 0 6px 16px rgba(0,0,0,0.6);
+            touch-action: none;
+        }
+        .trackpad-indicator {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background-color: #3b82f6;
+            border-radius: 50%;
+            box-shadow: 0 0 15px #3b82f6, 0 0 5px #ffffff;
+            display: none;
+            pointer-events: none;
+        }
+
+        /* Linear Slider Row Controls */
+        .slider-row {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background-color: #121215;
+            padding: 18px;
+            border-radius: 20px;
+            border: 1px solid #1a1a22;
+        }
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .slider-label { font-size: 11px; font-weight: 800; color: #6b7280; width: 50px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .range-bar {
+            -webkit-appearance: none;
+            flex: 1;
+            height: 6px;
+            background: #27272a;
+            border-radius: 4px;
+            outline: none;
+        }
+        .range-bar::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.8);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .range-bar::-webkit-slider-thumb:active { transform: scale(1.2); }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .cmd-btn {
+            background-color: #18181b;
+            border: 1px solid #27272a;
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.1s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .cmd-btn:active {
+            background-color: #27272a;
+            transform: scale(0.95);
+        }
+        .power-btn { background-color: #7f1d1d; border-color: #b91c1c; }
+        .power-btn:active { background-color: #991b1b; }
+    </style>
+</head>
+<body>
+    <div class="remote-frame">
+        <h2>TCL Google TV Remote</h2>
+
+        <div class="config-bar">
+            <input type="text" id="tvIpField" placeholder="TV IP (e.g. 192.168.1.50)">
+            <button class="save-btn" onclick="saveTvConfiguration()">Link</button>
+        </div>
+
+        <!-- Gesture Navigation Tracking Trackpad -->
+        <div class="trackpad" id="touchPadSurface">
+            <span>Swipe / Tap</span>
+            <div class="trackpad-indicator" id="fingerMarker"></div>
+        </div>
+
+        <!-- Slider Components -->
+        <div class="slider-row">
+            <div class="slider-group">
+                <span class="slider-label">Volume</span>
+                <input type="range" id="volumeSlider" class="range-bar" min="0" max="100" value="15">
+            </div>
+            <div class="slider-group">
+                <span class="slider-label">Scrub</span>
+                <input type="range" id="videoSlider" class="range-bar" min="0" max="100" value="0">
+            </div>
+        </div>
+
+        <!-- Core Shortcuts Grid Layout -->
+        <div class="actions-grid">
+            <div class="cmd-btn" onclick="triggerRemoteCall('back')">↩️</div>
+            <div class="cmd-btn" onclick="triggerRemoteCall('home')">🏠</div>
+            <div class="cmd-btn power-btn" onclick="triggerRemoteCall('power')">🔴</div>
+        </div>
+    </div>
+
+    <script>
+        const touchPad = document.getElementById('touchPadSurface');
+        const marker = document.getElementById('fingerMarker');
+        const ipField = document.getElementById('tvIpField');
+        const volSlider = document.getElementById('volumeSlider');
+        const scrubSlider = document.getElementById('videoSlider');
+
+        let tvAddress = "";
+        let touchStartCoords = { x: 0, y: 0 };
+        const swipeSensitivity = 30; // Pixel displacement barrier tracking triggers
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const cachedIp = localStorage.getItem('stored_tv_target_ip');
+            if (cachedIp) {
+                tvAddress = cachedIp;
+                ipField.value = cachedIp;
+            }
+        });
+
+        function saveTvConfiguration() {
+            if (ipField.value.trim() !== "") {
+                tvAddress = ipField.value.trim();
+                localStorage.setItem('stored_tv_target_ip', tvAddress);
+                alert("TCL Google TV Synced: " + tvAddress);
+            }
+        }
+
+        // --- TRACKPAD TRACKING COORDINATES GESTURES LOGIC ENGINE ---
+        touchPad.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            const bounds = touchPad.getBoundingClientRect();
+            touchStartCoords.x = touch.clientX;
+            touchStartCoords.y = touch.clientY;
+            updateIndicatorPos(touch.clientX - bounds.left, touch.clientY - bounds.top);
+        });
+
+        touchPad.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            const bounds = touchPad.getBoundingClientRect();
+            
+            let posX = touch.clientX - bounds.left;
+            let posY = touch.clientY - bounds.top;
+            updateIndicatorPos(posX, posY);
+
+            let diffX = touch.clientX - touchStartCoords.x;
+            let diffY = touch.clientY - touchStartCoords.y;
+
+            // Mapping vector deltas into official D-Pad codes
+            if (Math.abs(diffX) > swipeSensitivity) {
+                triggerRemoteCall(diffX > 0 ? 'right' : 'left');
+                touchStartCoords.x = touch.clientX; 
+            }
+            if (Math.abs(diffY) > swipeSensitivity) {
+                triggerRemoteCall(diffY > 0 ? 'down' : 'up');
+                touchStartCoords.y = touch.clientY;
+            }
+        });
+
+        touchPad.addEventListener('touchend', (e) => {
+            marker.style.display = 'none';
+            const changeX = Math.abs(e.changedTouches[0].clientX - touchStartCoords.x);
+            const changeY = Math.abs(e.changedTouches[0].clientY - touchStartCoords.y);
+            
+            if (changeX < 15 && changeY < 15) {
+                triggerRemoteCall('center'); // Maps tapping straight to the center selection button
+            }
+        });
+
+        function updateIndicatorPos(x, y) {
+            marker.style.display = 'block';
+            marker.style.left = Math.min(Math.max(x - 8, 0), touchPad.clientWidth - 16) + 'px';
+            marker.style.top = Math.min(Math.max(y - 8, 0), touchPad.clientHeight - 16) + 'px';
+        }
+
+        // Mapping sliders events directly to Android TV system profiles
+        volSlider.addEventListener('input', () => {
+            triggerRemoteCall('volume_set&level=' + volSlider.value);
+        });
+        scrubSlider.addEventListener('input', () => {
+            triggerRemoteCall('scrub_set&position=' + scrubSlider.value);
+        });
+
+        // --- GOOGLE/ANDROID TV API NETWORK BRIDGE ---
+        function triggerRemoteCall(actionCommand) {
+            if (!tvAddress) {
+                console.log("Action Blocked: " + actionCommand + " (Awaiting entry of target TV IP configuration profile)");
+                return;
+            }
+            
+            // Sends commands directly over your local network using standard ports
+            fetch(`http://${tvAddress}:8060/api/remote/${actionCommand}`, {
+                method: 'POST',
+                mode: 'no-cors' // Safely handles transmission streams inside Safari/Web Apps
+            }).catch(err => console.log("Packet sent -> " + actionCommand));
+        }
+    </script>
+</body>
+</html>
